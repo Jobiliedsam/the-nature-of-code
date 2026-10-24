@@ -1,0 +1,12 @@
+{
+  "name": "nature-of-code",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Estudos de The Nature of Code (Daniel Shiffman) com p5.js",
+  "scripts": {
+    "dev": "node server.js"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}
