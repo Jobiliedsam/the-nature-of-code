@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Executando sketch p5.js</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        display: grid;
+        height: 100vh;
+        min-height: 0;
+        place-items: center;
+        overflow: hidden;
+        background: #111;
+      }
+
+      canvas {
+        max-width: 100%;
+        max-height: 100%;
+        height: auto;
+      }
+
+      #error {
+        max-width: 36rem;
+        margin: 24px;
+        color: #fff;
+        font: 16px/1.5 "Segoe UI", sans-serif;
+        text-align: center;
+      }
+
+      #error[hidden] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <p id="error" role="alert" hidden></p>
+    <script>
+      const errorMessage = document.querySelector("#error");
+      const params = new URLSearchParams(location.search);
+      const sketchPath = params.get("sketch");
+      let scriptPaths;
+
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.hidden = false;
+      }
+
+      function loadScript(source) {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = source;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error(`Não foi possível carregar ${source}`));
+          document.body.append(script);
+        });
+      }
+
+      try {
+        scriptPaths = JSON.parse(params.get("scripts") || "[]");
+      } catch (error) {
+        showError("A lista de arquivos JavaScript do exemplo é inválida.");
+      }
+
+      if (
+        !sketchPath ||
+        sketchPath.startsWith("/") ||
+        sketchPath.split("/").includes("..") ||
+        sketchPath.includes("\\") ||
+        !sketchPath.toLowerCase().endsWith("sketch.js") ||
+        !Array.isArray(scriptPaths) ||
+        scriptPaths.some(
+          (file) =>
+            typeof file !== "string" ||
+            file.startsWith("/") ||
+            file.split("/").includes("..") ||
+            file.includes("\\") ||
+            !file.toLowerCase().endsWith(".js"),
+        )
+      ) {
+        showError("Não foi possível abrir este sketch. Volte e selecione um exemplo válido.");
+      } else {
+        const sketchUrl = new URL(
+          `/${sketchPath.split("/").map(encodeURIComponent).join("/")}`,
+          location.origin,
+        );
+        const base = document.createElement("base");
+        base.href = new URL(".", sketchUrl).href;
+        document.head.prepend(base);
+
+        const p5 = document.createElement("script");
+        p5.src = "https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js";
+        p5.onerror = () =>
+          showError("Não foi possível carregar o p5.js. Confira sua conexão com a internet.");
+        p5.onload = async () => {
+          try {
+            for (const file of scriptPaths) {
+              const scriptUrl = new URL(
+                `/${file.split("/").map(encodeURIComponent).join("/")}`,
+                location.origin,
+              );
+              await loadScript(scriptUrl.href);
+            }
+            await loadScript(sketchUrl.href);
+          } catch (error) {
+            showError(error.message);
+          }
+        };
+        document.head.append(p5);
+      }
+    </script>
+  </body>
+</html>
